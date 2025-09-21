@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Map & Warehouse Popup</title>
+  <style>
+    /* ===== MAP CHUNG ===== */
+    .map-container {
+      position: relative;
+      width: 100%;   
+      max-width: 1200px; 
+      margin: 0 auto;
+      touch-action: none; /* cho phép pinch trên mobile */
+    }
+    .map {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    /* ===== HOUSE ===== */
+    #house {
+      position: absolute;
+      left: 35%;
+      top: 20%;
+      width: 40%;
+      max-width: 500px;
+      height: auto;
+      cursor: pointer;
+      z-index: 10;
+      transform: translate(-50%, -50%);
+    }
+
+    /* ===== POPUP WAREHOUSE ===== */
+    #popup-warehouse {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 1000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 10px;
+    }
+
+    #popup-warehouse .popup-wrapper {
+      position: relative;
+      width: 80%;
+      max-width: 800px;
+      max-height: 90%;
+      margin: auto;
+    }
+
+    #popup-warehouse .popup-content {
+      display: block;
+      width: 100%;
+      height: auto;
+      max-height: 100%;
+    }
+
+    #popup-warehouse .popup-close {
+      position: absolute;
+      top: -5%;
+      right: -5%;
+      width: 10%;
+      max-width: 60px;
+      height: auto;
+      cursor: pointer;
+      z-index: 1010;
+    }
+  </style>
+</head>
+<body>
+  <!-- ===== MAP & HOUSE ===== -->
+  <div class="map-container" id="map-container">
+    <img src="https://raw.githubusercontent.com/bthanh2k5-dev/Thanhcubu/main/Map1.jpg" class="map" alt="Map">
+    <img src="https://raw.githubusercontent.com/bthanh2k5-dev/Thanhcubu/main/main%20house.png" id="house" alt="House">
+  </div>
+
+  <!-- ===== POPUP WAREHOUSE ===== -->
+  <div id="popup-warehouse">
+    <div class="popup-wrapper">
+      <img src="https://github.com/bthanh2k5-dev/Thanhcubu/blob/main/Close%20(2).png?raw=true" 
+           class="popup-close" 
+           alt="Close">
+      <img src="https://github.com/bthanh2k5-dev/Thanhcubu/blob/main/khodo-popup.png?raw=true" 
+           class="popup-content" 
+           alt="Warehouse">
+    </div>
+  </div>
+
+  <script>
+    const mapContainer = document.getElementById("map-container");
+    const house = document.getElementById("house");
+    const popup = document.getElementById("popup-warehouse");
+    const popupClose = document.querySelector("#popup-warehouse .popup-close");
+
+    // ==== Click mở popup ====
+    house.addEventListener("click", function () {
+      popup.style.display = "flex";
+    });
+
+    // ==== Click đóng popup ====
+    popupClose.addEventListener("click", function () {
+      popup.style.display = "none";
+    });
+
+    // ==== Click ngoài nội dung đóng popup ====
+    popup.addEventListener("click", function(e) {
+      if(e.target === this){
+        this.style.display = "none";
+      }
+    });
+
+    // ==== Pinch-to-zoom map + house ====
+    let initialDistance = null;
+    let initialScale = 1;
+    let currentScale = 1;
+
+    mapContainer.addEventListener("touchstart", function(e) {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        initialDistance = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        initialScale = currentScale;
+      }
+    }, { passive: false });
+
+    mapContainer.addEventListener("touchmove", function(e) {
+      if (e.touches.length === 2 && initialDistance) {
+        e.preventDefault();
+        const newDistance = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        const scaleChange = newDistance / initialDistance;
+        currentScale = Math.min(Math.max(1, initialScale * scaleChange), 3); // scale 1~3
+        mapContainer.style.transform = `scale(${currentScale})`;
+        mapContainer.style.transformOrigin = "0 0"; 
+      }
+    }, { passive: false });
+
+    mapContainer.addEventListener("touchend", function(e) {
+      if (e.touches.length < 2) {
+        initialDistance = null;
+      }
+    });
+  </script>
+</body>
+</html>
