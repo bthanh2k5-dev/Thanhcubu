@@ -5,102 +5,258 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Map & Warehouse Popup</title>
   <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+    }
+
     /* ===== MAP CHUNG ===== */
     .map-container {
       position: relative;
       width: 100%;   
       max-width: 1200px; 
       margin: 0 auto;
+      padding: 10px;
     }
+
     .map {
       display: block;
       width: 100%;
       height: auto;
+      max-width: 100%;
     }
 
-    /* ===== HOUSE ===== */
+    /* ===== HOUSE - RESPONSIVE ===== */
     #house {
       position: absolute;
-      left: 420px;    
-      top: 160px;
-      width: 500px;
+      width: 40vw; /* Sử dụng viewport width */
+      max-width: 300px; /* Giới hạn kích thước tối đa */
       height: auto;
       cursor: pointer;
       z-index: 10;
+      /* Vị trí responsive */
+      left: clamp(20px, 30vw, 350px);
+      top: clamp(20px, 15vh, 120px);
+      /* Hiệu ứng hover */
+      transition: transform 0.3s ease;
     }
 
-    /* ===== POPUP WAREHOUSE ===== */
+    #house:hover {
+      transform: scale(1.05);
+    }
+
+    /* ===== POPUP WAREHOUSE - RESPONSIVE ===== */
     #popup-warehouse {
-      display: none; 
+      display: none;
       position: fixed;
       inset: 0;
       background: rgba(0,0,0,0.7);
       z-index: 1000;
-      display: flex;
       justify-content: center;
       align-items: center;
+      padding: 20px;
+    }
+
+    #popup-warehouse.show {
+      display: flex;
     }
 
     #popup-warehouse .popup-wrapper {
       position: relative;
-      width: 800px;  
+      width: 90vw; /* 90% viewport width */
+      max-width: 800px;
       height: auto;
       margin: auto;
+      background: white;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     }
 
     #popup-warehouse .popup-content {
       display: block;
       width: 100%;
       height: auto;
+      max-height: 80vh; /* Giới hạn chiều cao */
+      object-fit: contain;
     }
 
-    /* Nút đóng luôn góc trên phải popup */
+    /* Nút đóng responsive */
     #popup-warehouse .popup-close {
       position: absolute;
-      top: 40px;
-      right: 0px;
-      width: 150px;
-      height: 145px;
+      top: 10px;
+      right: 10px;
+      width: 40px;
+      height: 40px;
+      background: url('https://github.com/bthanh2k5-dev/Thanhcubu/blob/main/Close%20(2).png?raw=true') center/contain no-repeat;
       cursor: pointer;
       z-index: 1010;
+      border: none;
+      border-radius: 50%;
+      background-color: rgba(255,255,255,0.9);
+      transition: all 0.3s ease;
+    }
+
+    #popup-warehouse .popup-close:hover {
+      background-color: #ff4444;
+      transform: scale(1.1);
+    }
+
+    /* ===== MEDIA QUERIES ===== */
+    @media (max-width: 768px) {
+      .map-container {
+        padding: 5px;
+      }
+
+      #house {
+        width: 50vw;
+        max-width: 250px;
+        left: 5vw;
+        top: 5vh;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .map-container {
+        padding: 2px;
+      }
+
+      #house {
+        width: 60vw;
+        max-width: 200px;
+        left: 2vw;
+        top: 2vh;
+      }
+
+      #popup-warehouse .popup-wrapper {
+        width: 95vw;
+        max-height: 90vh;
+      }
+
+      #popup-warehouse .popup-content {
+        max-height: 70vh;
+      }
+
+      #popup-warehouse .popup-close {
+        width: 35px;
+        height: 35px;
+        top: 5px;
+        right: 5px;
+      }
+    }
+
+    /* ===== LOADING & TRANSITION ===== */
+    img {
+      transition: opacity 0.3s ease;
+    }
+
+    img[loading="lazy"] {
+      opacity: 0;
+    }
+
+    img[loading="lazy"]:loaded {
+      opacity: 1;
+    }
+
+    /* ===== TOUCH FRIENDLY ===== */
+    @media (hover: none) and (pointer: coarse) {
+      #house {
+        min-width: 60px;
+        min-height: 60px;
+      }
+      
+      #popup-warehouse .popup-close {
+        min-width: 44px;
+        min-height: 44px;
+      }
     }
   </style>
 </head>
 <body>
   <!-- ===== MAP & HOUSE ===== -->
   <div class="map-container">
-    <img src="https://raw.githubusercontent.com/bthanh2k5-dev/Thanhcubu/main/Map1.jpg" class="map" alt="Map">
-    <img src="https://raw.githubusercontent.com/bthanh2k5-dev/Thanhcubu/main/main%20house.png" id="house" alt="House">
+    <img src="https://raw.githubusercontent.com/bthanh2k5-dev/Thanhcubu/main/Map1.jpg" 
+         class="map" 
+         alt="Map" 
+         loading="lazy">
+    <img src="https://raw.githubusercontent.com/bthanh2k5-dev/Thanhcubu/main/main%20house.png" 
+         id="house" 
+         alt="House" 
+         loading="lazy">
   </div>
 
   <!-- ===== POPUP WAREHOUSE ===== -->
   <div id="popup-warehouse">
     <div class="popup-wrapper">
-      <img src="https://github.com/bthanh2k5-dev/Thanhcubu/blob/main/Close%20(2).png?raw=true" 
-           class="popup-close" 
-           alt="Close">
+      <button class="popup-close" aria-label="Đóng popup" title="Đóng"></button>
       <img src="https://github.com/bthanh2k5-dev/Thanhcubu/blob/main/khodo-popup.png?raw=true" 
            class="popup-content" 
-           alt="Warehouse">
+           alt="Warehouse" 
+           loading="lazy">
     </div>
   </div>
 
   <script>
-    // Mở warehouse
-    document.getElementById("house").addEventListener("click", function () {
-      document.getElementById("popup-warehouse").style.display = "flex";
-    });
+    // Đợi DOM load xong
+    document.addEventListener('DOMContentLoaded', function() {
+      const house = document.getElementById("house");
+      const popup = document.getElementById("popup-warehouse");
+      const closeBtn = document.querySelector("#popup-warehouse .popup-close");
 
-    // Đóng warehouse
-    document.querySelector("#popup-warehouse .popup-close").addEventListener("click", function () {
-      document.getElementById("popup-warehouse").style.display = "none";
-    });
+      // Kiểm tra elements tồn tại
+      if (!house || !popup || !closeBtn) return;
 
-    // Đóng popup khi click ngoài nội dung
-    document.getElementById("popup-warehouse").addEventListener("click", function(e) {
-      if(e.target === this){
-        this.style.display = "none";
-      }
+      // Mở warehouse
+      house.addEventListener("click", function () {
+        popup.classList.add('show');
+        document.body.style.overflow = 'hidden'; // Ngăn scroll khi popup mở
+      });
+
+      // Đóng warehouse
+      closeBtn.addEventListener("click", function () {
+        popup.classList.remove('show');
+        document.body.style.overflow = 'auto';
+      });
+
+      // Đóng popup khi click ngoài nội dung
+      popup.addEventListener("click", function(e) {
+        if(e.target === this){
+          popup.classList.remove('show');
+          document.body.style.overflow = 'auto';
+        }
+      });
+
+      // Đóng popup bằng phím ESC
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && popup.classList.contains('show')) {
+          popup.classList.remove('show');
+          document.body.style.overflow = 'auto';
+        }
+      });
+
+      // Touch/swipe để đóng trên mobile
+      let startY = 0;
+      popup.addEventListener('touchstart', function(e) {
+        startY = e.touches[0].clientY;
+      });
+
+      popup.addEventListener('touchmove', function(e) {
+        if (!popup.classList.contains('show')) return;
+        
+        const currentY = e.touches[0].clientY;
+        const diffY = currentY - startY;
+        
+        // Nếu swipe xuống quá 100px thì đóng
+        if (diffY > 100) {
+          popup.classList.remove('show');
+          document.body.style.overflow = 'auto';
+        }
+      });
     });
   </script>
 </body>
