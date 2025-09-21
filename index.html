@@ -9,9 +9,8 @@
     .map-container {
       position: relative;
       width: 100%;   
-      max-width: 120000px; 
+      max-width: 1200px; 
       margin: 0 auto;
-      touch-action: none; /* cho phép pinch trên mobile */
     }
     .map {
       display: block;
@@ -22,19 +21,17 @@
     /* ===== HOUSE ===== */
     #house {
       position: absolute;
-      left: 35%;
-      top: 20%;
-      width: 40%;
-      max-width: 500px;
+      left: 420px;    
+      top: 160px;
+      width: 500px;
       height: auto;
       cursor: pointer;
       z-index: 10;
-      transform: translate(-50%, -50%);
     }
 
     /* ===== POPUP WAREHOUSE ===== */
     #popup-warehouse {
-      display: none;
+      display: none; 
       position: fixed;
       inset: 0;
       background: rgba(0,0,0,0.7);
@@ -42,14 +39,12 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      padding: 10px;
     }
 
     #popup-warehouse .popup-wrapper {
       position: relative;
-      width: 80%;
+      width: 90%;
       max-width: 800px;
-      max-height: 90%;
       margin: auto;
     }
 
@@ -57,24 +52,37 @@
       display: block;
       width: 100%;
       height: auto;
-      max-height: 100%;
+      border-radius: 10px;
     }
 
-   #popup-warehouse .popup-close {
+    /* Nút đóng luôn góc trên phải popup */
+    #popup-warehouse .popup-close {
       position: absolute;
-      top: 5%;
-      right: 1%;
-      width: 20%;
-      max-width: 100px;
-      height: auto;
+      top: 10px;
+      right: 10px;
+      width: 40px;
+      height: 40px;
       cursor: pointer;
       z-index: 1010;
+    }
+
+    @media (max-width: 768px) {
+      #house {
+        left: 50%;
+        top: 20%;
+        width: 200px;
+        transform: translateX(-50%);
+      }
+      #popup-warehouse .popup-close {
+        width: 30px;
+        height: 30px;
+      }
     }
   </style>
 </head>
 <body>
   <!-- ===== MAP & HOUSE ===== -->
-  <div class="map-container" id="map-container">
+  <div class="map-container">
     <img src="https://raw.githubusercontent.com/bthanh2k5-dev/Thanhcubu/main/Map1.jpg" class="map" alt="Map">
     <img src="https://raw.githubusercontent.com/bthanh2k5-dev/Thanhcubu/main/main%20house.png" id="house" alt="House">
   </div>
@@ -92,93 +100,22 @@
   </div>
 
   <script>
-    const mapContainer = document.getElementById("map-container");
-    const house = document.getElementById("house");
-    const popup = document.getElementById("popup-warehouse");
-    const popupClose = document.querySelector("#popup-warehouse .popup-close");
-
-    // ==== Click mở popup ====
-    house.addEventListener("click", function () {
-      popup.style.display = "flex";
+    // Mở warehouse
+    document.getElementById("house").addEventListener("click", function () {
+      document.getElementById("popup-warehouse").style.display = "flex";
     });
 
-    // ==== Click đóng popup ====
-    popupClose.addEventListener("click", function () {
-      popup.style.display = "none";
+    // Đóng warehouse bằng nút
+    document.querySelector("#popup-warehouse .popup-close").addEventListener("click", function () {
+      document.getElementById("popup-warehouse").style.display = "none";
     });
 
-    // ==== Click ngoài nội dung đóng popup ====
-    popup.addEventListener("click", function(e) {
+    // Đóng popup khi click ngoài nội dung
+    document.getElementById("popup-warehouse").addEventListener("click", function(e) {
       if(e.target === this){
         this.style.display = "none";
       }
     });
-
-    // ==== Pinch-to-zoom map + house ====
-   let initialDistance = null;
-let initialScale = 1;
-let currentScale = 1;
-let startMidpoint = null;
-let originX = 0;
-let originY = 0;
-let translateX = 0;
-let translateY = 0;
-
-function getMidpoint(touches) {
-  return {
-    x: (touches[0].clientX + touches[1].clientX) / 2,
-    y: (touches[0].clientY + touches[1].clientY) / 2
-  };
-}
-
-mapContainer.addEventListener("touchstart", function(e) {
-  if (e.touches.length === 2) {
-    e.preventDefault();
-    initialDistance = Math.hypot(
-      e.touches[0].clientX - e.touches[1].clientX,
-      e.touches[0].clientY - e.touches[1].clientY
-    );
-    initialScale = currentScale;
-    startMidpoint = getMidpoint(e.touches);
-    originX = startMidpoint.x - translateX;
-    originY = startMidpoint.y - translateY;
-  } else if (e.touches.length === 1) {
-    e.preventDefault();
-    startMidpoint = { x: e.touches[0].clientX - translateX, y: e.touches[0].clientY - translateY };
-  }
-}, { passive: false });
-
-mapContainer.addEventListener("touchmove", function(e) {
-  if (e.touches.length === 2 && initialDistance) {
-    e.preventDefault();
-    const newDistance = Math.hypot(
-      e.touches[0].clientX - e.touches[1].clientX,
-      e.touches[0].clientY - e.touches[1].clientY
-    );
-    let scaleChange = newDistance / initialDistance;
-    currentScale = Math.min(Math.max(1, initialScale * scaleChange), 3); // giới hạn scale 1~3
-
-    const midpoint = getMidpoint(e.touches);
-    translateX = midpoint.x - originX * currentScale;
-    translateY = midpoint.y - originY * currentScale;
-
-    mapContainer.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentScale})`;
-  } else if (e.touches.length === 1) {
-    e.preventDefault();
-    // pan khi 1 ngón tay
-    translateX = e.touches[0].clientX - startMidpoint.x;
-    translateY = e.touches[0].clientY - startMidpoint.y;
-    mapContainer.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentScale})`;
-  }
-}, { passive: false });
-
-mapContainer.addEventListener("touchend", function(e) {
-  if (e.touches.length < 2) {
-    initialDistance = null;
-  }
-});
-
   </script>
 </body>
 </html>
-
