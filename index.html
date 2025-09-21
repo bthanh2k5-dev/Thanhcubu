@@ -1,161 +1,298 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Game Nông Trại với popup ảnh tùy chỉnh</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Game Nông Trại - Popup chỉnh tọa độ</title>
 <style>
-body {
-  margin:0;
-  font-family:Arial,sans-serif;
-  background:#cce7a1;
-  display:flex;
-  justify-content:center;
-}
-.map-container {
-  position:relative;
-  width:100%;
-  max-width:800px;
-  margin:20px auto;
-  border:2px solid #333;
-  overflow:hidden;
-}
-.map-container img.map {
-  width:100%;
-  display:block;
-}
-/* Popup ảnh */
-.popup {
-  display:none;
-  position:absolute;
-  z-index:1000;
-}
-.popup img {
-  display:block;
-  width:100%;
-  height:100%;
-  object-fit:fill; /* Kéo dãn ảnh theo đúng kích thước div */
-}
-.close-btn {
-  position:absolute;
-  top:0;
-  right:0;
-  font-size:20px;
-  font-weight:bold;
-  background:none;
-  border:none;
-  cursor:pointer;
-  color:#f44336;
-  z-index:1001;
-}
-/* Overlay mờ map còn lại */
-.overlay {
-  display:none;
-  position:absolute;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
-  background:rgba(0,0,0,0.2);
-  z-index:900;
-}
+  body{margin:0;font-family:Arial,sans-serif;background:#cce7a1;display:flex;justify-content:center;}
+  .map-container{position:relative;width:100%;max-width:800px;margin:20px auto;border:2px solid #333;overflow:hidden;}
+  .map-container img.map{width:100%;display:block;}
+
+  /* Popup ảnh (position:fixed, đặt theo viewport) */
+  .popup{display:none;position:fixed;z-index:1100;background:transparent; /* no white frame */ }
+  .popup img{display:block;width:100%;height:100%;object-fit:contain;}
+
+  /* nút đóng nằm trong popup */
+  .close-btn{position:absolute;top:4px;right:4px;font-size:20px;font-weight:bold;background:none;border:none;cursor:pointer;color:#f44336;z-index:1110;}
+
+  /* overlay full-screen */
+  .overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.2);z-index:1000;}
 </style>
 </head>
 <body>
 
-<div class="map-container" id="mapContainer">
-  <img src="https://raw.githubusercontent.com/bthanh2k5-dev/Thanhcubu/main/Map1.jpg" class="map" id="map">
-</div>
+  <div class="map-container" id="mapContainer">
+    <img id="map" class="map" src="https://raw.githubusercontent.com/bthanh2k5-dev/Thanhcubu/main/Map1.jpg" alt="map">
+  </div>
 
-<div class="overlay" id="overlay"></div>
+  <!-- overlay che mờ cả màn hình -->
+  <div id="overlay" class="overlay"></div>
 
-<div class="popup" id="popup">
-  <button class="close-btn" id="closePopup">✖</button>
-  <img id="popupImg" src="" alt="">
-</div>
+  <!-- popup ảnh (position:fixed) -->
+  <div id="popup" class="popup">
+    <button id="closePopup" class="close-btn">✖</button>
+    <img id="popupImg" src="" alt="">
+  </div>
 
 <script>
-const mapContainer=document.getElementById('mapContainer');
-const map=document.getElementById('map');
-const overlay=document.getElementById('overlay');
-const popup=document.getElementById('popup');
-const closeBtn=document.getElementById('closePopup');
-const popupImg=document.getElementById('popupImg');
+/* THAM SỐ CHÍNH (map gốc) */
+const ORIGINAL_MAP_W = 800;
+const ORIGINAL_MAP_H = 600;
 
-// Mảng item: tọa độ, kích thước item, popup ảnh và vị trí/kích thước popup
-const items=[
+/* DOM */
+const map = document.getElementById('map');
+const mapContainer = document.getElementById('mapContainer');
+const overlay = document.getElementById('overlay');
+const popup = document.getElementById('popup');
+const popupImg = document.getElementById('popupImg');
+const closeBtn = document.getElementById('closePopup');
+
+/* items: popupX/popupY là tọa độ *trên map gốc* (px),
+   popupWidth/popupHeight là kích thước popup trên map gốc (sẽ scale theo map + zoom) */
+const items = [
   {
-    id:'house',
-    src:'https://raw.githubusercontent.com/bthanh2k5-dev/Thanhcubu/main/main%20house.png',
-    x:200, y:40, width:300, height:100, clickable:true,
-    popupImg:'https://github.com/bthanh2k5-dev/Thanhcubu/blob/main/khodo-popup.png?raw=true',
-    popupX:-30,   // tọa độ popup từ trái map (px)
-    popupY:250,   // tọa độ popup từ trên map (px)
-    popupWidth:600,  // chiều rộng popup (px)
-    popupHeight:500  // chiều cao popup (px)
+    id: 'house',
+    src: 'https://raw.githubusercontent.com/bthanh2k5-dev/Thanhcubu/main/main%20house.png',
+    x: 200, y: 40, width: 300, height: 100, clickable: true,
+    popupImg: 'https://i.pinimg.com/736x/44/99/e8/4499e8c70a622ea63e7ffb445ec9874f.jpg',
+    // Tọa độ và kích thước popup theo map gốc (sẽ scale theo zoom)
+    popupX: 220,        // tọa độ X trên map gốc
+    popupY: 20,         // tọa độ Y trên map gốc  
+    popupWidth: 300,    // kích thước WIDTH trên map gốc
+    popupHeight: 400    // kích thước HEIGHT trên map gốc
   }
 ];
 
-// Vẽ item trên map
+/* vẽ các item (scale theo kích thước map hiện tại - KHÔNG tính zoom) */
 function drawItems(){
-  const scaleX=map.offsetWidth/800;
-  const scaleY=map.offsetHeight/600;
+  const scaleX = map.offsetWidth / ORIGINAL_MAP_W;
+  const scaleY = map.offsetHeight / ORIGINAL_MAP_H;
   items.forEach(item=>{
-    let img=document.getElementById(item.id);
-    if(!img){
-      img=document.createElement('img');
-      img.id=item.id;
-      img.src=item.src;
-      mapContainer.appendChild(img);
+    let el = document.getElementById(item.id);
+    if(!el){
+      el = document.createElement('img');
+      el.id = item.id;
+      el.src = item.src;
+      el.style.position = 'absolute';
+      mapContainer.appendChild(el);
     }
-    img.style.position='absolute';
-    img.style.width=item.width*scaleX+'px';
-    img.style.left=item.x*scaleX+'px';
-    img.style.top=item.y*scaleY+'px';
-    img.style.cursor=item.clickable?'pointer':'default';
+    el.style.width = (item.width * scaleX) + 'px';
+    el.style.left  = (item.x * scaleX) + 'px';
+    el.style.top   = (item.y * scaleY) + 'px';
+    el.style.cursor = item.clickable ? 'pointer' : 'default';
   });
 }
 
-// Click item hiển thị popup ảnh
-mapContainer.addEventListener('click', e=>{
-  const rect=mapContainer.getBoundingClientRect();
-  const clickX=e.clientX-rect.left;
-  const clickY=e.clientY-rect.top;
-  const scaleX=map.offsetWidth/800;
-  const scaleY=map.offsetHeight/600;
+/* biến lưu item hiện đang mở popup (nếu có) */
+let currentPopupItem = null;
 
-  items.forEach(item=>{
-    if(item.clickable){
-      const itemX=item.x*scaleX;
-      const itemY=item.y*scaleY;
-      const itemW=item.width*scaleX;
-      const itemH=item.height*scaleY;
-      if(clickX>=itemX && clickX<=itemX+itemW && clickY>=itemY && clickY<=itemY+itemH){
-        // Hiển thị popup với ảnh, kích thước và tọa độ tùy chỉnh
-        popupImg.src=item.popupImg;
-        popup.style.left=item.popupX+'px';
-        popup.style.top=item.popupY+'px';
-        popup.style.width=item.popupWidth+'px';
-        popup.style.height=item.popupHeight+'px';
-        popup.style.display='block';
-        overlay.style.display='block';
-      }
-    }
+/* hàm tính scale theo zoom level cho popup */
+function getZoomScale() {
+  // Lấy kích thước thực tế của map trong viewport (bao gồm zoom)
+  const mapRect = map.getBoundingClientRect();
+  
+  // Zoom scale = kích thước viewport / kích thước CSS
+  const zoomScaleX = mapRect.width / map.offsetWidth;
+  const zoomScaleY = mapRect.height / map.offsetHeight;
+  
+  return { x: zoomScaleX, y: zoomScaleY };
+}
+
+/* tính vị trí và kích thước popup theo scale giống như house (bao gồm zoom) */
+function showPopupFor(item){
+  // Lấy vị trí map container trong viewport
+  const mapContainerRect = mapContainer.getBoundingClientRect();
+  
+  // Scale CSS (kích thước container / kích thước gốc)
+  const cssScaleX = map.offsetWidth / ORIGINAL_MAP_W;
+  const cssScaleY = map.offsetHeight / ORIGINAL_MAP_H;
+  
+  // Scale zoom (kích thước viewport / kích thước CSS)
+  const { x: zoomScaleX, y: zoomScaleY } = getZoomScale();
+  
+  // Tổng scale = CSS scale * Zoom scale
+  const totalScaleX = cssScaleX * zoomScaleX;
+  const totalScaleY = cssScaleY * zoomScaleY;
+
+  // Vị trí popup theo tọa độ gốc, scale theo tổng scale
+  const popupLeft = mapContainerRect.left + (item.popupX * totalScaleX);
+  const popupTop = mapContainerRect.top + (item.popupY * totalScaleY);
+  
+  // Kích thước popup scale theo tổng scale
+  const popupWidth = item.popupWidth * totalScaleX;
+  const popupHeight = item.popupHeight * totalScaleY;
+
+  // Clamp để popup luôn nằm trong viewport
+  const margin = 8;
+  let left = popupLeft;
+  let top = popupTop;
+  let w = popupWidth;
+  let h = popupHeight;
+
+  // Điều chỉnh nếu popup bị tràn
+  if(left + w > window.innerWidth - margin) {
+    left = window.innerWidth - w - margin;
+  }
+  if(top + h > window.innerHeight - margin) {
+    top = window.innerHeight - h - margin;
+  }
+  if(left < margin) {
+    left = margin;
+  }
+  if(top < margin) {
+    top = margin;
+  }
+
+  // Set popup
+  popupImg.src = item.popupImg || '';
+  popup.style.left = Math.round(left) + 'px';
+  popup.style.top = Math.round(top) + 'px';
+  popup.style.width = Math.round(w) + 'px';
+  popup.style.height = Math.round(h) + 'px';
+  popup.style.display = 'block';
+  overlay.style.display = 'block';
+
+  currentPopupItem = item;
+  
+  // Debug info
+  console.log('Popup positioned:', { 
+    left, top, w, h,
+    cssScaleX, cssScaleY, zoomScaleX, zoomScaleY, totalScaleX, totalScaleY,
+    original: {x: item.popupX, y: item.popupY, w: item.popupWidth, h: item.popupHeight}
   });
+}
+
+/* ẩn popup */
+function hidePopup(){
+  popup.style.display = 'none';
+  overlay.style.display = 'none';
+  currentPopupItem = null;
+}
+
+/* khi click trên map, kiểm tra item, mở popup nếu trúng 
+   - Tính toán theo tọa độ CSS (không zoom) giống như drawItems */
+mapContainer.addEventListener('click', (e)=>{
+  const rect = mapContainer.getBoundingClientRect();
+  const clickX = e.clientX - rect.left;
+  const clickY = e.clientY - rect.top;
+  
+  // Scale CSS (giống drawItems - KHÔNG tính zoom)
+  const scaleX = map.offsetWidth / ORIGINAL_MAP_W;
+  const scaleY = map.offsetHeight / ORIGINAL_MAP_H;
+
+  console.log('Click detected:', { clickX, clickY, scaleX, scaleY });
+
+  for(const item of items){
+    if(!item.clickable) continue;
+    
+    // Tọa độ item theo scale CSS (giống drawItems)
+    const itemX = item.x * scaleX;
+    const itemY = item.y * scaleY;
+    const itemW = item.width * scaleX;
+    const itemH = item.height * scaleY;
+    
+    console.log(`Item ${item.id}:`, { itemX, itemY, itemW, itemH });
+    
+    if(clickX >= itemX && clickX <= itemX + itemW && 
+       clickY >= itemY && clickY <= itemY + itemH){
+      e.preventDefault();
+      showPopupFor(item);
+      return;
+    }
+  }
 });
 
-// Đóng popup chỉ khi click nút X
-closeBtn.addEventListener('click', ()=>{
-  popup.style.display='none';
-  overlay.style.display='none';
+/* nếu resize hoặc scroll khi popup đang mở, reposition popup để vẫn bám đúng map */
+function repositionIfOpen(){
+  if(!currentPopupItem) return;
+  showPopupFor(currentPopupItem);
+}
+
+/* đóng popup */
+closeBtn.addEventListener('click', hidePopup);
+overlay.addEventListener('click', hidePopup);
+
+/* gọi draw khi load/resize */
+window.addEventListener('load', ()=>{
+  drawItems();
 });
 
-// Vẽ item khi load và resize
-window.addEventListener('load', drawItems);
-window.addEventListener('resize', drawItems);
+window.addEventListener('resize', ()=>{
+  drawItems(); 
+  // Debounce để đợi resize ổn định
+  clearTimeout(window.resizeTimeout);
+  window.resizeTimeout = setTimeout(repositionIfOpen, 100);
+});
+
+// Xử lý scroll
+let scrollTimeout;
+window.addEventListener('scroll', ()=>{
+  clearTimeout(scrollTimeout);
+  scrollTimeout = setTimeout(repositionIfOpen, 16);
+});
+
+// Detect zoom change (sử dụng ResizeObserver)
+const resizeObserver = new ResizeObserver(entries => {
+  for (let entry of entries) {
+    if (entry.target === map) {
+      clearTimeout(window.zoomTimeout);
+      window.zoomTimeout = setTimeout(() => {
+        repositionIfOpen();
+      }, 50);
+    }
+  }
+});
+
+resizeObserver.observe(map);
+
+// Fallback cho browser cũ
+if (!window.ResizeObserver) {
+  let lastWidth = map.offsetWidth;
+  let checkZoom = setInterval(() => {
+    const currentWidth = map.offsetWidth;
+    if (Math.abs(currentWidth - lastWidth) > 1) {
+      lastWidth = currentWidth;
+      repositionIfOpen();
+    }
+  }, 250);
+}
+
+// Đóng popup bằng ESC
+document.addEventListener('keydown', (e) => {
+  if(e.key === 'Escape' && currentPopupItem) {
+    hidePopup();
+  }
+});
+
+// Khóa scroll khi popup mở
+let scrollPosition = 0;
+function toggleBodyScroll(allow) {
+  if(allow) {
+    document.body.style.position = '';
+    document.body.style.top = '';
+    window.scrollTo(0, scrollPosition);
+  } else {
+    scrollPosition = window.pageYOffset;
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollPosition}px`;
+    document.body.style.width = '100%';
+  }
+}
+
+// Cập nhật showPopupFor và hidePopup để khóa scroll
+const originalShowPopupFor = showPopupFor;
+showPopupFor = function(item) {
+  toggleBodyScroll(false);
+  originalShowPopupFor(item);
+}
+
+const originalHidePopup = hidePopup;
+hidePopup = function() {
+  originalHidePopup();
+  toggleBodyScroll(true);
+}
+
 </script>
-
 </body>
 </html>
-
-
