@@ -3,97 +3,157 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Game Nông Trại</title>
+<title>Game Nông Trại với popup ảnh tùy chỉnh</title>
 <style>
-body { margin:0; font-family:Arial,sans-serif; background:#cce7a1; display:flex; justify-content:center; }
-.map-container { position: relative; width: 100%; max-width: 800px; margin:20px auto; border:2px solid #333; }
-.map-container img.map { width:100%; display:block; }
-.popup { display:none; position: fixed; top:50%; left:50%; transform: translate(-50%, -50%);
-        background: #fff; border: 2px solid #333; border-radius:10px; padding:20px; z-index:1000; width:300px;
-        box-shadow:0 0 10px rgba(0,0,0,0.5);}
-.popup h2 { text-align:center; margin-bottom:10px; }
-.popup button.close-btn { display:block; margin:10px auto 0; padding:5px 15px; background:#f44336; color:#fff; border:none; border-radius:5px; cursor:pointer;}
-.overlay {display:none; position:fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); z-index:900;}
+body {
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:#cce7a1;
+  display:flex;
+  justify-content:center;
+}
+.map-container {
+  position:relative;
+  width:100%;
+  max-width:800px;
+  margin:20px auto;
+  border:2px solid #333;
+  overflow:hidden;
+}
+.map-container img.map {
+  width:100%;
+  display:block;
+}
+/* Popup ảnh */
+.popup {
+  display:none;
+  position:absolute;
+  z-index:1000;
+}
+.popup img {
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:fill; /* Kéo dãn ảnh theo đúng kích thước div */
+}
+.close-btn {
+  position:absolute;
+  top:0;
+  right:0;
+  font-size:20px;
+  font-weight:bold;
+  background:none;
+  border:none;
+  cursor:pointer;
+  color:#f44336;
+  z-index:1001;
+}
+/* Overlay mờ map còn lại */
+.overlay {
+  display:none;
+  position:absolute;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:rgba(0,0,0,0.2);
+  z-index:900;
+}
 </style>
 </head>
 <body>
 
 <div class="map-container" id="mapContainer">
-    <img src="https://raw.githubusercontent.com/bthanh2k5-dev/Thanhcubu/main/Map1.jpg" class="map" id="map">
+  <img src="https://raw.githubusercontent.com/bthanh2k5-dev/Thanhcubu/main/Map1.jpg" class="map" id="map">
 </div>
 
 <div class="overlay" id="overlay"></div>
+
 <div class="popup" id="popup">
-    <h2>Kho đồ</h2>
-    <p>Đây là kho đồ của bạn. Thêm item ở đây.</p>
-    <button class="close-btn" id="closePopup">Đóng</button>
+  <button class="close-btn" id="closePopup">✖</button>
+  <img id="popupImg" src="" alt="">
 </div>
 
 <script>
-const mapContainer = document.getElementById('mapContainer');
-const map = document.getElementById('map');
-const overlay = document.getElementById('overlay');
-const popup = document.getElementById('popup');
-const closeBtn = document.getElementById('closePopup');
+const mapContainer=document.getElementById('mapContainer');
+const map=document.getElementById('map');
+const overlay=document.getElementById('overlay');
+const popup=document.getElementById('popup');
+const closeBtn=document.getElementById('closePopup');
+const popupImg=document.getElementById('popupImg');
 
-// Các item với tọa độ x,y (map gốc 800x600) và kích thước vùng click
-const items = [
-    {id:'house', src:'https://raw.githubusercontent.com/bthanh2k5-dev/Thanhcubu/main/main%20house.png', x:200, y:40, width:300, height:100, clickable:true}
-    // thêm item khác ở đây {id:'tree1', src:'tree.png', x:100, y:200, width:80, height:80, clickable:false}
+// Mảng item: tọa độ, kích thước item, popup ảnh và vị trí/kích thước popup
+const items=[
+  {
+    id:'house',
+    src:'https://raw.githubusercontent.com/bthanh2k5-dev/Thanhcubu/main/main%20house.png',
+    x:200, y:40, width:300, height:100, clickable:true,
+    popupImg:'https://github.com/bthanh2k5-dev/Thanhcubu/blob/main/khodo-popup.png?raw=true',
+    popupX:20,   // tọa độ popup từ trái map (px)
+    popupY:100,   // tọa độ popup từ trên map (px)
+    popupWidth:200,  // chiều rộng popup (px)
+    popupHeight:200  // chiều cao popup (px)
+  }
 ];
 
-// Vẽ item lên map
-function drawItems() {
-    const scaleX = map.offsetWidth / 800; // scale theo map gốc
-    const scaleY = map.offsetHeight / 600;
-
-    items.forEach(item=>{
-        let img = document.getElementById(item.id);
-        if(!img){
-            img = document.createElement('img');
-            img.id = item.id;
-            img.src = item.src;
-            img.classList.add('item');
-            mapContainer.appendChild(img);
-        }
-        img.style.position = 'absolute';
-        img.style.width = item.width * scaleX + 'px';
-        img.style.left = item.x * scaleX + 'px';
-        img.style.top = item.y * scaleY + 'px';
-        img.style.cursor = item.clickable ? 'pointer' : 'default';
-    });
+// Vẽ item trên map
+function drawItems(){
+  const scaleX=map.offsetWidth/800;
+  const scaleY=map.offsetHeight/600;
+  items.forEach(item=>{
+    let img=document.getElementById(item.id);
+    if(!img){
+      img=document.createElement('img');
+      img.id=item.id;
+      img.src=item.src;
+      mapContainer.appendChild(img);
+    }
+    img.style.position='absolute';
+    img.style.width=item.width*scaleX+'px';
+    img.style.left=item.x*scaleX+'px';
+    img.style.top=item.y*scaleY+'px';
+    img.style.cursor=item.clickable?'pointer':'default';
+  });
 }
 
-// Click detection
-mapContainer.addEventListener('click', function(e){
-    const rect = mapContainer.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const clickY = e.clientY - rect.top;
-    const scaleX = map.offsetWidth / 800;
-    const scaleY = map.offsetHeight / 600;
+// Click item hiển thị popup ảnh
+mapContainer.addEventListener('click', e=>{
+  const rect=mapContainer.getBoundingClientRect();
+  const clickX=e.clientX-rect.left;
+  const clickY=e.clientY-rect.top;
+  const scaleX=map.offsetWidth/800;
+  const scaleY=map.offsetHeight/600;
 
-    items.forEach(item=>{
-        if(item.clickable){
-            const itemX = item.x * scaleX;
-            const itemY = item.y * scaleY;
-            const itemW = item.width * scaleX;
-            const itemH = item.height * scaleY;
-            if(clickX>=itemX && clickX<=itemX+itemW && clickY>=itemY && clickY<=itemY+itemH){
-                popup.style.display='block';
-                overlay.style.display='block';
-            }
-        }
-    });
+  items.forEach(item=>{
+    if(item.clickable){
+      const itemX=item.x*scaleX;
+      const itemY=item.y*scaleY;
+      const itemW=item.width*scaleX;
+      const itemH=item.height*scaleY;
+      if(clickX>=itemX && clickX<=itemX+itemW && clickY>=itemY && clickY<=itemY+itemH){
+        // Hiển thị popup với ảnh, kích thước và tọa độ tùy chỉnh
+        popupImg.src=item.popupImg;
+        popup.style.left=item.popupX+'px';
+        popup.style.top=item.popupY+'px';
+        popup.style.width=item.popupWidth+'px';
+        popup.style.height=item.popupHeight+'px';
+        popup.style.display='block';
+        overlay.style.display='block';
+      }
+    }
+  });
 });
 
-// Đóng popup
-closeBtn.addEventListener('click', ()=>{popup.style.display='none'; overlay.style.display='none';});
-overlay.addEventListener('click', ()=>{popup.style.display='none'; overlay.style.display='none';});
+// Đóng popup chỉ khi click nút X
+closeBtn.addEventListener('click', ()=>{
+  popup.style.display='none';
+  overlay.style.display='none';
+});
 
-// Vẽ item khi load và khi resize
+// Vẽ item khi load và resize
 window.addEventListener('load', drawItems);
 window.addEventListener('resize', drawItems);
-
 </script>
+
 </body>
 </html>
