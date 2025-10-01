@@ -1,55 +1,360 @@
 <!doctype html>
 <html>
-<body style="margin:0; position:relative;">
+<head>
+  <style>
+    /* Tắt highlight xanh khi chạm trên mobile */
+    * {
+      -webkit-tap-highlight-color: transparent;
+      -webkit-focus-ring-color: transparent;
+      outline: none;
+    }
+    /* Đảm bảo body full màn hình */
+    body {
+      margin: 0;
+      position: relative;
+      overflow: auto;
+      font-family: Arial, sans-serif;
+    }
+    /* Hiển thị số vàng */
+    #goldDisplay {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.7);
+      color: gold;
+      padding: 10px;
+      border-radius: 5px;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    /* Nút nhận vàng */
+    #goldButton {
+      position: absolute;
+      top: 700px;
+      left: 50px;
+      cursor: pointer;
+    }
+    /* Hiển thị số lượng vật phẩm */
+    .item-count {
+      position: absolute;
+      color: white;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 2px 5px;
+      border-radius: 3px;
+      font-size: 14px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
   <!-- Ảnh nền -->
   <img src="https://i.pinimg.com/736x/f8/84/10/f88410e44b2dc5bd1711e09e606a73f3.jpg" 
-       width="2000" height="1500">
+       width="2000" height="1500" style="display: block;">
 
-  <!-- Ảnh số 2 -->
-  <img id="img2" 
+  <!-- Nhà Chính -->
+  <img id="nhaChinh" 
        src="https://github.com/bthanh2k5-dev/Thanhcubu/blob/main/main%20house.png?raw=true"
        width="429" height="500"
        style="position:absolute;top:500px;left:50px;cursor:pointer;">
 
+  <!-- Shop -->
+  <img id="shop" 
+       src="https://i.pinimg.com/736x/8c/e7/f0/8ce7f0ea991e492b8c05eab35c9db83e.jpg"
+       width="300" height="300"
+       style="position:absolute;top:600px;left:600px;cursor:pointer;">
+
+  <!-- Nút nhận vàng -->
+  <img id="goldButton" 
+       src="https://i.pinimg.com/736x/6f/1a/28/6f1a28e8a74a77eaea577f0f0b3a8e4e.jpg"
+       width="100" height="100">
+
+  <!-- Hiển thị số vàng -->
+  <div id="goldDisplay">Vàng: 1000</div>
+
   <script>
-    const img2 = document.getElementById('img2');
+  let img3 = null;        // Ảnh chính khi mở
+  let extraImgs = [];     // Các ảnh phụ đi kèm
+  let gold = 1000;        // Số vàng ban đầu
+  // Quản lý số lượng vật phẩm (chỉ cho ảnh phụ 1)
+  let itemCounts = {
+    "https://i.pinimg.com/736x/49/53/da/4953dafba79eeaf48596a3329e2fcd46.jpg": 0, // Lúa
+    "https://i.pinimg.com/736x/41/98/21/41982106b72b6716dc35199f0a3475ba.jpg": 0, // Sữa
+    "https://i.pinimg.com/736x/b9/b7/02/b9b70266dee44339603fe27a6b93e789.jpg": 0, // Bánh mì chảo
+    "https://i.pinimg.com/736x/b6/cd/0b/b6cd0b1599ee44c61a77c33c49444921.jpg": 0  // Búa
+  };
 
-    img2.addEventListener('click', () => {
-      // Tạo ảnh 3
-      const img3 = document.createElement('img');
-      img3.src = 'https://i.pinimg.com/736x/5e/69/ee/5e69ee3aff12a31e38435da6280d0c3b.jpg';
-      img3.style.position = 'absolute';
-      img3.style.top = '200px';
-      img3.style.left = '300px';
-      img3.width = 507;
-      img3.height = 300;
-      img3.style.cursor = "pointer";
-      document.body.appendChild(img3);
+  // Cập nhật hiển thị số vàng
+  function updateGoldDisplay() {
+    document.getElementById('goldDisplay').textContent = `Vàng: ${gold}`;
+  }
 
-      // Vùng click + URL thay thế
-      const areas = [
-        {x:0,   y:0, w:160, h:80, url:"https://i.pinimg.com/736x/5e/69/ee/5e69ee3aff12a31e38435da6280d0c3b.jpg"},
-        {x:100, y:0, w:160, h:80, url:"https://i.pinimg.com/736x/2f/a6/9e/2fa69ec09f4619c9b6a3211dedc9eef8.jpg"},
-        {x:250, y:0, w:160, h:80, url:"https://i.pinimg.com/736x/83/67/81/836781ba6cf73e116742a0da5daebe82.jpg"},
-        {x:400, y:0, w:160, h:80, url:"https://i.pinimg.com/736x/b5/49/90/b5499069f109237fa55839f5d0f97f98.jpg"}
-      ];
+  // Hàm thêm vàng
+  function addGold(amount) {
+    gold += amount;
+    updateGoldDisplay();
+    console.log(`Đã nhận ${amount} vàng. Tổng vàng: ${gold}`);
+  }
 
-      img3.addEventListener('click', (e) => {
-        const rect = img3.getBoundingClientRect();
-        const offsetX = e.clientX - rect.left;
-        const offsetY = e.clientY - rect.top;
+  function taoAnh3(initialUrl, areas, isShop = false) {
+    // Xóa ảnh chính cũ nếu tồn tại
+    if (img3) {
+      img3.remove();
+      img3 = null;
+    }
+    // Xóa ảnh phụ và số lượng cũ
+    extraImgs.forEach(img => img.remove());
+    extraImgs = [];
 
-        for (const area of areas) {
-          if (offsetX >= area.x && offsetX <= area.x + area.w &&
-              offsetY >= area.y && offsetY <= area.y + area.h) {
-            
-            // Chỉ cần thay src thôi, không cần remove
-            img3.src = area.url;
-            break;
-          }
+    // Tạo ảnh chính
+    img3 = document.createElement('img');
+    img3.style.position = 'absolute';
+    img3.style.top = '200px';
+    img3.style.left = '300px';
+    img3.width = 507;
+    img3.height = 300;
+    img3.style.cursor = "pointer";
+    img3.src = initialUrl;
+    document.body.appendChild(img3);
+
+    // Tìm area khởi tạo để hiển thị ảnh phụ
+    const startArea = areas.find(a => a.url === initialUrl);
+    if (startArea && startArea.extraImages) {
+      startArea.extraImages.forEach((ex, index) => {
+        const exImg = document.createElement('img');
+        exImg.src = ex.url;
+        exImg.style.position = 'absolute';
+        exImg.style.top = (200 + ex.top) + "px";
+        exImg.style.left = (300 + ex.left) + "px";
+        exImg.width = ex.w;
+        exImg.height = ex.h;
+        exImg.style.cursor = isShop ? "pointer" : "default"; // Tất cả ảnh phụ trong Shop đều có thể click
+        document.body.appendChild(exImg);
+        extraImgs.push(exImg);
+
+        // Hiển thị số lượng vật phẩm bên dưới ảnh phụ thứ nhất trong Nhà Chính
+        if (!isShop && index === 0 && itemCounts[ex.url] !== undefined) {
+          const countDiv = document.createElement('div');
+          countDiv.className = 'item-count';
+          countDiv.textContent = `(x${itemCounts[ex.url]})`;
+          countDiv.style.top = (200 + ex.top + ex.h + 5) + "px";
+          countDiv.style.left = (300 + ex.left) + "px";
+          countDiv.style.width = ex.w + "px";
+          document.body.appendChild(countDiv);
+          extraImgs.push(countDiv); // Thêm div vào extraImgs để xóa sau
+        }
+
+        // Thêm sự kiện click cho tất cả ảnh phụ trong Shop
+        if (isShop && ex.goldCost) {
+          exImg.addEventListener('click', () => {
+            if (gold >= ex.goldCost) {
+              gold -= ex.goldCost;
+              updateGoldDisplay();
+              console.log(`Đã click ảnh phụ ${index + 1}, trừ ${ex.goldCost} vàng.`);
+
+              // Nếu là ảnh phụ 1, tăng số lượng vật phẩm
+              if (index === 0 && itemCounts[ex.url] !== undefined) {
+                itemCounts[ex.url] = (itemCounts[ex.url] || 0) + 1;
+                alert(`Đã mua vật phẩm! Số lượng hiện tại: ${itemCounts[ex.url]}`);
+              } else {
+                // Ảnh phụ 2: chỉ trừ vàng, không tăng count
+                alert(`Đã sử dụng ${ex.goldCost} vàng cho ảnh phụ ${index + 1}!`);
+              }
+            } else {
+              alert(`Không đủ vàng! Cần ${ex.goldCost} vàng.`);
+            }
+          });
         }
       });
+    }
+
+    // Xử lý sự kiện click trên ảnh chính
+    img3.addEventListener('click', (e) => {
+      const rect = img3.getBoundingClientRect();
+      const offsetX = e.clientX - rect.left;
+      const offsetY = e.clientY - rect.top;
+      console.log(`Click at: (${offsetX}, ${offsetY})`); // Debug tọa độ click
+
+      for (const area of areas) {
+        if (offsetX >= area.x && offsetX <= area.x + area.w &&
+            offsetY >= area.y && offsetY <= area.y + area.h) {
+          console.log(`Clicked area: ${area.url || area.action}`); // Debug khu vực được click
+
+          if (area.action === "close") {
+            img3.remove();
+            img3 = null;
+            extraImgs.forEach(img => img.remove());
+            extraImgs = [];
+          } else {
+            img3.src = area.url;
+
+            // Xóa ảnh phụ và số lượng cũ
+            extraImgs.forEach(img => img.remove());
+            extraImgs = [];
+
+            // Thêm ảnh phụ mới
+            if (area.extraImages) {
+              area.extraImages.forEach((ex, index) => {
+                const exImg = document.createElement('img');
+                exImg.src = ex.url;
+                exImg.style.position = 'absolute';
+                exImg.style.top = (200 + ex.top) + "px";
+                exImg.style.left = (300 + ex.left) + "px";
+                exImg.width = ex.w;
+                exImg.height = ex.h;
+                exImg.style.cursor = isShop ? "pointer" : "default"; // Tất cả ảnh phụ trong Shop đều có thể click
+                document.body.appendChild(exImg);
+                extraImgs.push(exImg);
+
+                // Hiển thị số lượng vật phẩm bên dưới ảnh phụ thứ nhất trong Nhà Chính
+                if (!isShop && index === 0 && itemCounts[ex.url] !== undefined) {
+                  const countDiv = document.createElement('div');
+                  countDiv.className = 'item-count';
+                  countDiv.textContent = `(x${itemCounts[ex.url]})`;
+                  countDiv.style.top = (200 + ex.top + ex.h + 5) + "px";
+                  countDiv.style.left = (300 + ex.left) + "px";
+                  countDiv.style.width = ex.w + "px";
+                  document.body.appendChild(countDiv);
+                  extraImgs.push(countDiv);
+                }
+
+                // Thêm sự kiện click cho tất cả ảnh phụ trong Shop
+                if (isShop && ex.goldCost) {
+                  exImg.addEventListener('click', () => {
+                    if (gold >= ex.goldCost) {
+                      gold -= ex.goldCost;
+                      updateGoldDisplay();
+                      console.log(`Đã click ảnh phụ ${index + 1}, trừ ${ex.goldCost} vàng.`);
+
+                      // Nếu là ảnh phụ 1, tăng số lượng vật phẩm
+                      if (index === 0 && itemCounts[ex.url] !== undefined) {
+                        itemCounts[ex.url] = (itemCounts[ex.url] || 0) + 1;
+                        alert(`Đã mua vật phẩm! Số lượng hiện tại: ${itemCounts[ex.url]}`);
+                      } else {
+                        // Ảnh phụ 2: chỉ trừ vàng, không tăng count
+                        alert(`Đã sử dụng ${ex.goldCost} vàng cho ảnh phụ ${index + 1}!`);
+                      }
+                    } else {
+                      alert(`Không đủ vàng! Cần ${ex.goldCost} vàng.`);
+                    }
+                  });
+                }
+              });
+            }
+          }
+          break;
+        }
+      }
     });
+  }
+
+  // ========== Nhà Chính ==========
+  const areasNhaChinh = [
+    { // URL1
+      x: 0, y: 0, w: 127, h: 75,
+      url: "https://i.pinimg.com/736x/5e/69/ee/5e69ee3aff12a31e38435da6280d0c3b.jpg",
+      extraImages: [
+        // 1. Ảnh phụ thứ nhất - lúa
+        {url: "https://i.pinimg.com/736x/49/53/da/4953dafba79eeaf48596a3329e2fcd46.jpg", top: 100, left: 50, w: 100, h: 100},
+        // 2. Ảnh phụ thứ hai
+        {url: "https://i.pinimg.com/736x/b5/49/90/b5499069f109237fa55839f5d0f97f98.jpg", top: 100, left: 200, w: 100, h: 100}
+      ]
+    },
+    { // URL2
+      x: 127, y: 0, w: 127, h: 75,
+      url: "https://i.pinimg.com/736x/2f/a6/9e/2fa69ec09f4619c9b6a3211dedc9eef8.jpg",
+      extraImages: [
+        // 1. Ảnh phụ thứ nhất - sữa
+        {url: "https://i.pinimg.com/736x/41/98/21/41982106b72b6716dc35199f0a3475ba.jpg", top: 100, left: 50, w: 100, h: 100},
+        // 2. Ảnh phụ thứ hai
+        {url: "https://i.pinimg.com/736x/b5/49/90/b5499069f109237fa55839f5d0f97f98.jpg", top: 100, left: 200, w: 100, h: 100}
+      ]
+    },
+    { // URL3
+      x: 254, y: 0, w: 127, h: 75,
+      url: "https://i.pinimg.com/736x/83/67/81/836781ba6cf73e116742a0da5daebe82.jpg",
+      extraImages: [
+        // 1. Ảnh phụ thứ nhất - bánh mì chảo
+        {url: "https://i.pinimg.com/736x/b9/b7/02/b9b70266dee44339603fe27a6b93e789.jpg", top: 100, left: 50, w: 100, h: 100},
+        // 2. Ảnh phụ thứ hai
+        {url: "https://i.pinimg.com/736x/b5/49/90/b5499069f109237fa55839f5d0f97f98.jpg", top: 100, left: 200, w: 100, h: 100}
+      ]
+    },
+    { // URL4
+      x: 381, y: 0, w: 126, h: 75,
+      url: "https://i.pinimg.com/736x/b5/49/90/b5499069f109237fa55839f5d0f97f98.jpg",
+      extraImages: [
+        // 1. Ảnh phụ thứ nhất - búa
+        {url: "https://i.pinimg.com/736x/b6/cd/0b/b6cd0b1599ee44c61a77c33c49444921.jpg", top: 100, left: 50, w: 100, h: 100},
+        // 2. Ảnh phụ thứ hai
+        {url: "https://i.pinimg.com/736x/b5/49/90/b5499069f109237fa55839f5d0f97f98.jpg", top: 100, left: 200, w: 100, h: 100}
+      ]
+    },
+    {x: 0, y: 250, w: 50, h: 50, action: "close"} // Nút tắt
+  ];
+
+  // ========== Shop ==========
+  const areasShop = [
+    { // URL1
+      x: 0, y: 0, w: 127, h: 75,
+      url: "https://i.pinimg.com/736x/5e/69/ee/5e69ee3aff12a31e38435da6280d0c3b.jpg",
+      extraImages: [
+        // 1. Ảnh phụ thứ nhất - lúa (trừ 50 vàng, tăng count)
+        {url: "https://i.pinimg.com/736x/49/53/da/4953dafba79eeaf48596a3329e2fcd46.jpg", top: 100, left: 50, w: 100, h: 100, goldCost: 50},
+        // 2. Ảnh phụ thứ hai (trừ 100 vàng, không tăng count)
+        {url: "https://i.pinimg.com/736x/b5/49/90/b5499069f109237fa55839f5d0f97f98.jpg", top: 100, left: 200, w: 100, h: 100, goldCost: 100}
+      ]
+    },
+    { // URL2
+      x: 127, y: 0, w: 127, h: 75,
+      url: "https://i.pinimg.com/736x/2f/a6/9e/2fa69ec09f4619c9b6a3211dedc9eef8.jpg",
+      extraImages: [
+        // 1. Ảnh phụ thứ nhất - sữa (trừ 50 vàng, tăng count)
+        {url: "https://i.pinimg.com/736x/41/98/21/41982106b72b6716dc35199f0a3475ba.jpg", top: 100, left: 50, w: 100, h: 100, goldCost: 50},
+        // 2. Ảnh phụ thứ hai (trừ 100 vàng, không tăng count)
+        {url: "https://i.pinimg.com/736x/b5/49/90/b5499069f109237fa55839f5d0f97f98.jpg", top: 100, left: 200, w: 100, h: 100, goldCost: 100}
+      ]
+    },
+    { // URL3
+      x: 254, y: 0, w: 127, h: 75,
+      url: "https://i.pinimg.com/736x/83/67/81/836781ba6cf73e116742a0da5daebe82.jpg",
+      extraImages: [
+        // 1. Ảnh phụ thứ nhất - bánh mì chảo (trừ 50 vàng, tăng count)
+        {url: "https://i.pinimg.com/736x/b9/b7/02/b9b70266dee44339603fe27a6b93e789.jpg", top: 100, left: 50, w: 100, h: 100, goldCost: 50},
+        // 2. Ảnh phụ thứ hai (trừ 100 vàng, không tăng count)
+        {url: "https://i.pinimg.com/736x/b5/49/90/b5499069f109237fa55839f5d0f97f98.jpg", top: 100, left: 200, w: 100, h: 100, goldCost: 100}
+      ]
+    },
+    { // URL4
+      x: 381, y: 0, w: 126, h: 75,
+      url: "https://i.pinimg.com/736x/b5/49/90/b5499069f109237fa55839f5d0f97f98.jpg",
+      extraImages: [
+        // 1. Ảnh phụ thứ nhất - búa (trừ 50 vàng, tăng count)
+        {url: "https://i.pinimg.com/736x/b6/cd/0b/b6cd0b1599ee44c61a77c33c49444921.jpg", top: 100, left: 50, w: 100, h: 100, goldCost: 50},
+        // 2. Ảnh phụ thứ hai (trừ 100 vàng, không tăng count)
+        {url: "https://i.pinimg.com/736x/b5/49/90/b5499069f109237fa55839f5d0f97f98.jpg", top: 100, left: 200, w: 100, h: 100, goldCost: 100}
+      ]
+    },
+    {x: 0, y: 250, w: 50, h: 50, action: "close"} // Nút tắt
+  ];
+
+  // Gán sự kiện click
+  document.getElementById('nhaChinh').addEventListener('click', () => {
+    console.log("Nhà chính clicked"); // Debug
+    taoAnh3("https://i.pinimg.com/736x/5e/69/ee/5e69ee3aff12a31e38435da6280d0c3b.jpg", areasNhaChinh);
+  });
+
+  document.getElementById('shop').addEventListener('click', () => {
+    console.log("Shop clicked"); // Debug
+    taoAnh3("https://i.pinimg.com/736x/5e/69/ee/5e69ee3aff12a31e38435da6280d0c3b.jpg", areasShop, true);
+  });
+
+  // Gán sự kiện click cho nút nhận vàng
+  document.getElementById('goldButton').addEventListener('click', () => {
+    addGold(100); // Nhận 100 vàng mỗi lần click
+  });
+
+  // Khởi tạo hiển thị vàng
+  updateGoldDisplay();
   </script>
 </body>
 </html>
