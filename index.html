@@ -1,21 +1,55 @@
 <!doctype html>
-<html lang="vi">
-<head>
-  <meta charset="utf-8">
-  <title>Ảnh nền Full Màn Hình</title>
-  <style>
-    body {
-      margin: 0;
-      height: 100vh;
-      background: url("https://sdmntprsouthcentralus.oaiusercontent.com/files/00000000-45fc-61f7-85a5-6e14cb107193/raw?se=2025-09-24T10%3A45%3A15Z&sp=r&sv=2024-08-04&sr=b&scid=2418d4e9-1d55-553d-9068-fe6e07d60a0c&skoid=d5627e4c-566b-4761-a954-54993b0ed17b&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-09-23T23%3A27%3A56Z&ske=2025-09-24T23%3A27%3A56Z&sks=b&skv=2024-08-04&sig=Rdi%2BPTJ5nWtedMoYd%2BP7fLDi%2Bgit/s9DZp%2Bhb72FimA%3D") center/cover no-repeat;
-      /* center/cover = tự scale + lấp kín màn hình */
-    }
-    h1 {
-      color: white;
-      text-align: center;
-      padding-top: 40vh;
-    }
-  </style>
-</head>
+<html>
+<body style="margin:0; position:relative;">
+  <!-- Ảnh nền -->
+  <img src="https://i.pinimg.com/736x/f8/84/10/f88410e44b2dc5bd1711e09e606a73f3.jpg" 
+       width="2000" height="1500">
+
+  <!-- Ảnh số 2 -->
+  <img id="img2" 
+       src="https://github.com/bthanh2k5-dev/Thanhcubu/blob/main/main%20house.png?raw=true"
+       width="429" height="500"
+       style="position:absolute;top:500px;left:50px;cursor:pointer;">
+
+  <script>
+    const img2 = document.getElementById('img2');
+
+    img2.addEventListener('click', () => {
+      // Tạo ảnh 3
+      const img3 = document.createElement('img');
+      img3.src = 'https://i.pinimg.com/736x/5e/69/ee/5e69ee3aff12a31e38435da6280d0c3b.jpg';
+      img3.style.position = 'absolute';
+      img3.style.top = '200px';
+      img3.style.left = '300px';
+      img3.width = 507;
+      img3.height = 300;
+      img3.style.cursor = "pointer";
+      document.body.appendChild(img3);
+
+      // Vùng click + URL thay thế
+      const areas = [
+        {x:0,   y:0, w:160, h:80, url:"https://i.pinimg.com/736x/5e/69/ee/5e69ee3aff12a31e38435da6280d0c3b.jpg"},
+        {x:100, y:0, w:160, h:80, url:"https://i.pinimg.com/736x/2f/a6/9e/2fa69ec09f4619c9b6a3211dedc9eef8.jpg"},
+        {x:250, y:0, w:160, h:80, url:"https://i.pinimg.com/736x/83/67/81/836781ba6cf73e116742a0da5daebe82.jpg"},
+        {x:400, y:0, w:160, h:80, url:"https://i.pinimg.com/736x/b5/49/90/b5499069f109237fa55839f5d0f97f98.jpg"}
+      ];
+
+      img3.addEventListener('click', (e) => {
+        const rect = img3.getBoundingClientRect();
+        const offsetX = e.clientX - rect.left;
+        const offsetY = e.clientY - rect.top;
+
+        for (const area of areas) {
+          if (offsetX >= area.x && offsetX <= area.x + area.w &&
+              offsetY >= area.y && offsetY <= area.y + area.h) {
+            
+            // Chỉ cần thay src thôi, không cần remove
+            img3.src = area.url;
+            break;
+          }
+        }
+      });
+    });
+  </script>
 </body>
 </html>
