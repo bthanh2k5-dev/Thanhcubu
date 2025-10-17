@@ -1,360 +1,382 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="vi">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ghép tranh tình yêu 💖</title>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <style>
-    /* Tắt highlight xanh khi chạm trên mobile */
-    * {
-      -webkit-tap-highlight-color: transparent;
-      -webkit-focus-ring-color: transparent;
-      outline: none;
-    }
-    /* Đảm bảo body full màn hình */
     body {
+      font-family: "Segoe UI", sans-serif;
+      background: #fff0f5;
+      text-align: center;
       margin: 0;
-      position: relative;
-      overflow: auto;
-      font-family: Arial, sans-serif;
+      padding: 20px;
+      overflow-x: hidden;
     }
-    /* Hiển thị số vàng */
-    #goldDisplay {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      background: rgba(0, 0, 0, 0.7);
-      color: gold;
-      padding: 10px;
-      border-radius: 5px;
-      font-size: 18px;
+    h1 {
+      color: #ff3366;
+      font-size: 30px;
+      margin-bottom: 20px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 150px);
+      grid-gap: 5px;
+      justify-content: center;
+      margin-top: 20px;
+      display: none; /* Hidden until game starts */
+    }
+    .piece {
+      width: 150px;
+      height: 150px;
+      background: #ffc1d6;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      background-size: 450px 450px;
+      background-repeat: no-repeat;
+      filter: brightness(0) blur(6px);
+    }
+    .locked {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .revealed {
+      filter: none;
+      transform: scale(1.03);
+    }
+    #message {
+      margin-top: 20px;
+      font-size: 22px;
+      color: #ff3366;
       font-weight: bold;
     }
-    /* Nút nhận vàng */
-    #goldButton {
-      position: absolute;
-      top: 700px;
-      left: 50px;
+    .question-box {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      border: 2px solid #ff66aa;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      z-index: 999;
+      width: 80%;
+      max-width: 320px;
+    }
+    .question-box button {
+      display: block;
+      width: 100%;
+      margin-top: 10px;
+      padding: 10px;
+      font-size: 16px;
+      background: #ffb6c1;
+      border: none;
+      border-radius: 6px;
       cursor: pointer;
     }
-    /* Hiển thị số lượng vật phẩm */
-    .item-count {
-      position: absolute;
-      color: white;
-      background: rgba(0, 0, 0, 0.7);
-      padding: 2px 5px;
-      border-radius: 3px;
-      font-size: 14px;
+    .question-box button:hover {
+      background: #ff80aa;
+    }
+    /* Popup danh hiệu */
+    .popup {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      background: #fff;
+      border-radius: 15px;
+      padding: 30px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.3);
+      z-index: 1000;
       text-align: center;
+      transition: 0.4s;
+    }
+    .popup.active {
+      transform: translate(-50%, -50%) scale(1);
+    }
+    .popup h2 {
+      color: #ff3366;
+      margin-bottom: 15px;
+    }
+    .popup button {
+      background: #ff66aa;
+      border: none;
+      padding: 10px 20px;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    /* Hoa hướng dương */
+    .sunflower {
+      position: fixed;
+      bottom: 0;
+      font-size: 20px;
+      animation: float 4s linear forwards;
+    }
+    /* Emoji cười */
+    .laugh {
+      position: fixed;
+      bottom: 0;
+      font-size: 25px;
+      animation: laughFloat 4s linear forwards;
+    }
+    @keyframes float {
+      0% {transform: translateY(0); opacity: 1;}
+      100% {transform: translateY(-100vh); opacity: 0;}
+    }
+    @keyframes laughFloat {
+      0% {transform: translateY(0) rotate(0deg); opacity: 1;}
+      100% {transform: translateY(-100vh) rotate(720deg); opacity: 0;}
+    }
+    /* Nút nhấn đỏ 3D */
+    #secretBtn {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      border: none;
+      background: radial-gradient(circle at 30% 30%, #ff5c5c, #c70000 80%);
+      box-shadow: 0 6px 0 #7a0000, 0 8px 15px rgba(0,0,0,0.4);
+      cursor: pointer;
+      transition: all 0.15s ease-in-out;
+    }
+    #secretBtn:active {
+      transform: translateY(4px);
+      box-shadow: 0 3px 0 #7a0000, 0 4px 8px rgba(0,0,0,0.3);
+    }
+    /* Status MQTT */
+    #status {
+      font-size: 22px;
+      font-weight: bold;
+      color: #444;
+      padding: 15px 30px;
+      border-radius: 12px;
+      display: inline-block;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      transition: 0.3s;
+    }
+    .connected {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    .disconnected {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+    /* Nút bắt đầu */
+    #startBtn {
+      margin-top: 40px;
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #ff4d4d, #b30000);
+      box-shadow: 0 5px 10px rgba(0,0,0,0.3);
+      border: none;
+      cursor: pointer;
+      font-size: 18px;
+      color: white;
+      transition: 0.2s;
+      display: none;
+    }
+    #startBtn:active {
+      transform: scale(0.95);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.4);
     }
   </style>
 </head>
 <body>
-  <!-- Ảnh nền -->
-  <img src="https://i.pinimg.com/736x/f8/84/10/f88410e44b2dc5bd1711e09e606a73f3.jpg" 
-       width="2000" height="1500" style="display: block;">
-
-  <!-- Nhà Chính -->
-  <img id="nhaChinh" 
-       src="https://github.com/bthanh2k5-dev/Thanhcubu/blob/main/main%20house.png?raw=true"
-       width="429" height="500"
-       style="position:absolute;top:500px;left:50px;cursor:pointer;">
-
-  <!-- Shop -->
-  <img id="shop" 
-       src="https://i.pinimg.com/736x/8c/e7/f0/8ce7f0ea991e492b8c05eab35c9db83e.jpg"
-       width="300" height="300"
-       style="position:absolute;top:600px;left:600px;cursor:pointer;">
-
-  <!-- Nút nhận vàng -->
-  <img id="goldButton" 
-       src="https://i.pinimg.com/736x/6f/1a/28/6f1a28e8a74a77eaea577f0f0b3a8e4e.jpg"
-       width="100" height="100">
-
-  <!-- Hiển thị số vàng -->
-  <div id="goldDisplay">Vàng: 1000</div>
-
+  <h1>💖 Trò chơi ghép tranh tình yêu 💖</h1>
+  <div id="status" class="disconnected">⏳ Vui lòng đợi server kết nối...</div>
+  <button id="startBtn" onclick="startGame()">Bắt đầu</button>
+  <p id="hint" style="display: none;">Bấm vào nút tròn 10 lần sẽ có gợi ý đáp án</p>
+  <div class="grid" id="grid"></div>
+  <div id="message"></div>
+  <!-- Popup danh hiệu -->
+  <div id="popup" class="popup">
+    <h2>🎉 Chúc mừng! 🎉</h2>
+    <p>Bạn đã nhận được danh hiệu<br><b style="color:#ff3366;">“Phiếu Bé Ngu” 🐷</b></p>
+    <button onclick="closePopup()">Tôi Chấp Nhận💕</button>
+  </div>
+  <!-- Popup troll -->
+  <div id="trollPopup" class="popup">
+    <h2>😆 Ahahah vậy cũng tin :)))</h2>
+    <p>Bấm 10 lần thiệt hả???</p>
+    <button onclick="closeTroll()">Okok 😂</button>
+  </div>
+  <!-- Nút bí ẩn -->
+  <button id="secretBtn" style="display: none;"></button>
+  <audio id="dingSound" src="https://www.soundjay.com/buttons/sounds/button-16.mp3" preload="auto"></audio>
+  <audio id="laughSound" src="https://www.myinstants.com/media/sounds/trollolol.mp3" preload="auto"></audio>
   <script>
-  let img3 = null;        // Ảnh chính khi mở
-  let extraImgs = [];     // Các ảnh phụ đi kèm
-  let gold = 1000;        // Số vàng ban đầu
-  // Quản lý số lượng vật phẩm (chỉ cho ảnh phụ 1)
-  let itemCounts = {
-    "https://i.pinimg.com/736x/49/53/da/4953dafba79eeaf48596a3329e2fcd46.jpg": 0, // Lúa
-    "https://i.pinimg.com/736x/41/98/21/41982106b72b6716dc35199f0a3475ba.jpg": 0, // Sữa
-    "https://i.pinimg.com/736x/b9/b7/02/b9b70266dee44339603fe27a6b93e789.jpg": 0, // Bánh mì chảo
-    "https://i.pinimg.com/736x/b6/cd/0b/b6cd0b1599ee44c61a77c33c49444921.jpg": 0  // Búa
-  };
+    let client;
+    const grid = document.getElementById("grid");
+    const message = document.getElementById("message");
+    const popup = document.getElementById("popup");
+    const trollPopup = document.getElementById("trollPopup");
+    const secretBtn = document.getElementById("secretBtn");
+    const dingSound = document.getElementById("dingSound");
+    const laughSound = document.getElementById("laughSound");
+    const hint = document.getElementById("hint");
+    const image = "https://down-vn.img.susercontent.com/file/vn-11134207-7qukw-lfuw6kd4vhbe94@resize_w450_nl.webp";
+    const questions = [
+      { q: "Hẹn hò ngày nào", a: ["A. 5/9/2025", "B. 9/5/2024", "C. 9/5/2025"], correct: 2 },
+      { q: "Mình chụp mấy tấm photo book rồi?", a: ["A. 5", "B. 4", "C. 3"], correct: 1 },
+      { q: "Ai đẹp trai nhất thế giới?", a: ["A. Trương bảo Thanh", "B. Trương Bảo Thanh", "C. Trương Bảo thanh"], correct: 1 },
+      { q: "Ai bị khờ?", a: ["A. Trần Thị Mỹ Trinh", "B. Trần Thị Mỹ Trân", "C. Bồ thằng Thanh"], correct: 0 },
+      { q: "20 năm trước em bao nhiêu tuổi?", a: ["A. 20", "B. 91", "C. 97"], correct: 1 },
+      { q: "Tại sao 20 năm trước em lại 91 tuổi?", a: ["A. Không biết", "B. Tao thích tao ghi vậy đó đc hok?", "C. Lêu Lêu"], correct: 0 },
+      { q: "Buổi sáng em thức dậy, điều đầu tiên nên làm là gì?", a: ["A. Mở mắt", "B. Địch banh phòng", "C. Đi ỉa"], correct: 0 },
+      { q: "Buổi sáng em thức dậy, điều thứ 2 em làm là gì?", a: ["A. Đánh răng (ý quên em hông có đánh răng)", "B. Nhắn cho anh", "C. Đi làm"], correct: 1 },
+      { q: "Nếu anh bị ướt mưa, em sẽ...?", a: ["A. Cởi đồ cho anh thay", "B. Nhảy te te te", "C. Trú mưa cùng cho romance :33"], correct: 2 }
+    ];
+    let solved = 0;
 
-  // Cập nhật hiển thị số vàng
-  function updateGoldDisplay() {
-    document.getElementById('goldDisplay').textContent = `Vàng: ${gold}`;
-  }
+    function connectMQTT() {
+      const status = document.getElementById("status");
+      const startBtn = document.getElementById("startBtn");
 
-  // Hàm thêm vàng
-  function addGold(amount) {
-    gold += amount;
-    updateGoldDisplay();
-    console.log(`Đã nhận ${amount} vàng. Tổng vàng: ${gold}`);
-  }
+      client = mqtt.connect('wss://mqtt-dashboard.com:8884/mqtt');
 
-  function taoAnh3(initialUrl, areas, isShop = false) {
-    // Xóa ảnh chính cũ nếu tồn tại
-    if (img3) {
-      img3.remove();
-      img3 = null;
-    }
-    // Xóa ảnh phụ và số lượng cũ
-    extraImgs.forEach(img => img.remove());
-    extraImgs = [];
+      client.on('connect', () => {
+        status.textContent = "🟢 Server đã kết nối! Bấm để bắt đầu chơi 💕";
+        status.classList.remove("disconnected");
+        status.classList.add("connected");
+        startBtn.style.display = "inline-block";
+      });
 
-    // Tạo ảnh chính
-    img3 = document.createElement('img');
-    img3.style.position = 'absolute';
-    img3.style.top = '200px';
-    img3.style.left = '300px';
-    img3.width = 507;
-    img3.height = 300;
-    img3.style.cursor = "pointer";
-    img3.src = initialUrl;
-    document.body.appendChild(img3);
+      client.on('error', () => {
+        status.textContent = "🔴 Lỗi kết nối. Đang thử lại...";
+        status.classList.remove("connected");
+        status.classList.add("disconnected");
+        startBtn.style.display = "none";
+      });
 
-    // Tìm area khởi tạo để hiển thị ảnh phụ
-    const startArea = areas.find(a => a.url === initialUrl);
-    if (startArea && startArea.extraImages) {
-      startArea.extraImages.forEach((ex, index) => {
-        const exImg = document.createElement('img');
-        exImg.src = ex.url;
-        exImg.style.position = 'absolute';
-        exImg.style.top = (200 + ex.top) + "px";
-        exImg.style.left = (300 + ex.left) + "px";
-        exImg.width = ex.w;
-        exImg.height = ex.h;
-        exImg.style.cursor = isShop ? "pointer" : "default"; // Tất cả ảnh phụ trong Shop đều có thể click
-        document.body.appendChild(exImg);
-        extraImgs.push(exImg);
-
-        // Hiển thị số lượng vật phẩm bên dưới ảnh phụ thứ nhất trong Nhà Chính
-        if (!isShop && index === 0 && itemCounts[ex.url] !== undefined) {
-          const countDiv = document.createElement('div');
-          countDiv.className = 'item-count';
-          countDiv.textContent = `(x${itemCounts[ex.url]})`;
-          countDiv.style.top = (200 + ex.top + ex.h + 5) + "px";
-          countDiv.style.left = (300 + ex.left) + "px";
-          countDiv.style.width = ex.w + "px";
-          document.body.appendChild(countDiv);
-          extraImgs.push(countDiv); // Thêm div vào extraImgs để xóa sau
-        }
-
-        // Thêm sự kiện click cho tất cả ảnh phụ trong Shop
-        if (isShop && ex.goldCost) {
-          exImg.addEventListener('click', () => {
-            if (gold >= ex.goldCost) {
-              gold -= ex.goldCost;
-              updateGoldDisplay();
-              console.log(`Đã click ảnh phụ ${index + 1}, trừ ${ex.goldCost} vàng.`);
-
-              // Nếu là ảnh phụ 1, tăng số lượng vật phẩm
-              if (index === 0 && itemCounts[ex.url] !== undefined) {
-                itemCounts[ex.url] = (itemCounts[ex.url] || 0) + 1;
-                alert(`Đã mua vật phẩm! Số lượng hiện tại: ${itemCounts[ex.url]}`);
-              } else {
-                // Ảnh phụ 2: chỉ trừ vàng, không tăng count
-                alert(`Đã sử dụng ${ex.goldCost} vàng cho ảnh phụ ${index + 1}!`);
-              }
-            } else {
-              alert(`Không đủ vàng! Cần ${ex.goldCost} vàng.`);
-            }
-          });
-        }
+      client.on('close', () => {
+        status.textContent = "❌ Mất kết nối, vui lòng đợi server...";
+        status.classList.remove("connected");
+        status.classList.add("disconnected");
+        startBtn.style.display = "none";
       });
     }
 
-    // Xử lý sự kiện click trên ảnh chính
-    img3.addEventListener('click', (e) => {
-      const rect = img3.getBoundingClientRect();
-      const offsetX = e.clientX - rect.left;
-      const offsetY = e.clientY - rect.top;
-      console.log(`Click at: (${offsetX}, ${offsetY})`); // Debug tọa độ click
+    function startGame() {
+      alert("🎮 Trò chơi bắt đầu! Chúc bạn may mắn 💖");
+      document.getElementById("status").style.display = "none";
+      document.getElementById("startBtn").style.display = "none";
+      document.getElementById("grid").style.display = "grid";
+      document.getElementById("hint").style.display = "block";
+      secretBtn.style.display = "block";
+      // Initialize puzzle pieces
+      for (let i = 0; i < 9; i++) {
+        const piece = document.createElement("div");
+        piece.className = "piece" + (i > 0 ? " locked" : "");
+        piece.style.backgroundImage = `url('${image}')`;
+        const col = i % 3;
+        const row = Math.floor(i / 3);
+        piece.style.backgroundPosition = `-${col * 150}px -${row * 150}px`;
+        piece.dataset.index = i;
+        piece.addEventListener("click", showQuestion);
+        grid.appendChild(piece);
+      }
+    }
 
-      for (const area of areas) {
-        if (offsetX >= area.x && offsetX <= area.x + area.w &&
-            offsetY >= area.y && offsetY <= area.y + area.h) {
-          console.log(`Clicked area: ${area.url || area.action}`); // Debug khu vực được click
-
-          if (area.action === "close") {
-            img3.remove();
-            img3 = null;
-            extraImgs.forEach(img => img.remove());
-            extraImgs = [];
+    function showQuestion(e) {
+      const i = Number(e.target.dataset.index);
+      if (i > solved) {
+        alert("🚫 Bạn phải trả lời đúng câu trước đã!");
+        return;
+      }
+      const q = questions[i];
+      const box = document.createElement("div");
+      box.className = "question-box";
+      box.innerHTML = `<h3>${q.q}</h3>`;
+      q.a.forEach((ans, idx) => {
+        const btn = document.createElement("button");
+        btn.textContent = ans;
+        btn.onclick = () => {
+          if (idx === q.correct) {
+            e.target.classList.add("revealed");
+            e.target.classList.remove("locked");
+            e.target.removeEventListener("click", showQuestion);
+            box.remove();
+            solved++;
+            dingSound.play();
+            if (solved < 9) grid.children[solved].classList.remove("locked");
+            if (solved === 9) celebrate();
           } else {
-            img3.src = area.url;
-
-            // Xóa ảnh phụ và số lượng cũ
-            extraImgs.forEach(img => img.remove());
-            extraImgs = [];
-
-            // Thêm ảnh phụ mới
-            if (area.extraImages) {
-              area.extraImages.forEach((ex, index) => {
-                const exImg = document.createElement('img');
-                exImg.src = ex.url;
-                exImg.style.position = 'absolute';
-                exImg.style.top = (200 + ex.top) + "px";
-                exImg.style.left = (300 + ex.left) + "px";
-                exImg.width = ex.w;
-                exImg.height = ex.h;
-                exImg.style.cursor = isShop ? "pointer" : "default"; // Tất cả ảnh phụ trong Shop đều có thể click
-                document.body.appendChild(exImg);
-                extraImgs.push(exImg);
-
-                // Hiển thị số lượng vật phẩm bên dưới ảnh phụ thứ nhất trong Nhà Chính
-                if (!isShop && index === 0 && itemCounts[ex.url] !== undefined) {
-                  const countDiv = document.createElement('div');
-                  countDiv.className = 'item-count';
-                  countDiv.textContent = `(x${itemCounts[ex.url]})`;
-                  countDiv.style.top = (200 + ex.top + ex.h + 5) + "px";
-                  countDiv.style.left = (300 + ex.left) + "px";
-                  countDiv.style.width = ex.w + "px";
-                  document.body.appendChild(countDiv);
-                  extraImgs.push(countDiv);
-                }
-
-                // Thêm sự kiện click cho tất cả ảnh phụ trong Shop
-                if (isShop && ex.goldCost) {
-                  exImg.addEventListener('click', () => {
-                    if (gold >= ex.goldCost) {
-                      gold -= ex.goldCost;
-                      updateGoldDisplay();
-                      console.log(`Đã click ảnh phụ ${index + 1}, trừ ${ex.goldCost} vàng.`);
-
-                      // Nếu là ảnh phụ 1, tăng số lượng vật phẩm
-                      if (index === 0 && itemCounts[ex.url] !== undefined) {
-                        itemCounts[ex.url] = (itemCounts[ex.url] || 0) + 1;
-                        alert(`Đã mua vật phẩm! Số lượng hiện tại: ${itemCounts[ex.url]}`);
-                      } else {
-                        // Ảnh phụ 2: chỉ trừ vàng, không tăng count
-                        alert(`Đã sử dụng ${ex.goldCost} vàng cho ảnh phụ ${index + 1}!`);
-                      }
-                    } else {
-                      alert(`Không đủ vàng! Cần ${ex.goldCost} vàng.`);
-                    }
-                  });
-                }
-              });
-            }
+            alert("Sai rồi 😝 Thử lại nha!");
           }
-          break;
-        }
+        };
+        box.appendChild(btn);
+      });
+      document.body.appendChild(box);
+    }
+
+    function celebrate() {
+      message.innerHTML = "🌻 Chúc mừng bé đã hoàn thành ghép tranh 💕";
+      popup.classList.add("active");
+      // Send MQTT message to ESP32
+      if (client && client.connected) {
+        client.publish('esp32/text', 'Đã Hoàn Thành', { qos: 1 }, (err) => {
+          if (err) {
+            console.error('Failed to publish MQTT message:', err);
+          } else {
+            console.log('Published "Đã Hoàn Thành" to esp32/text');
+          }
+        });
+      } else {
+        console.error('MQTT client not connected');
+      }
+      for (let i = 0; i < 40; i++) {
+        const flower = document.createElement("div");
+        flower.className = "sunflower";
+        flower.innerHTML = "🌻";
+        flower.style.left = Math.random() * 100 + "vw";
+        flower.style.fontSize = Math.random() * 25 + 15 + "px";
+        flower.style.animationDuration = 3 + Math.random() * 2 + "s";
+        document.body.appendChild(flower);
+        setTimeout(() => flower.remove(), 4000);
+      }
+    }
+
+    function closePopup() {
+      popup.classList.remove("active");
+    }
+
+    let clickCount = 0;
+    secretBtn.addEventListener("click", () => {
+      clickCount++;
+      secretBtn.style.transform = "scale(0.9)";
+      setTimeout(() => secretBtn.style.transform = "scale(1)", 100);
+      if (clickCount === 10) {
+        trollPopup.classList.add("active");
+        laughSound.play();
+        spawnLaughs();
+        clickCount = 0;
       }
     });
-  }
 
-  // ========== Nhà Chính ==========
-  const areasNhaChinh = [
-    { // URL1
-      x: 0, y: 0, w: 127, h: 75,
-      url: "https://i.pinimg.com/736x/5e/69/ee/5e69ee3aff12a31e38435da6280d0c3b.jpg",
-      extraImages: [
-        // 1. Ảnh phụ thứ nhất - lúa
-        {url: "https://i.pinimg.com/736x/49/53/da/4953dafba79eeaf48596a3329e2fcd46.jpg", top: 100, left: 50, w: 100, h: 100},
-        // 2. Ảnh phụ thứ hai
-        {url: "https://i.pinimg.com/736x/b5/49/90/b5499069f109237fa55839f5d0f97f98.jpg", top: 100, left: 200, w: 100, h: 100}
-      ]
-    },
-    { // URL2
-      x: 127, y: 0, w: 127, h: 75,
-      url: "https://i.pinimg.com/736x/2f/a6/9e/2fa69ec09f4619c9b6a3211dedc9eef8.jpg",
-      extraImages: [
-        // 1. Ảnh phụ thứ nhất - sữa
-        {url: "https://i.pinimg.com/736x/41/98/21/41982106b72b6716dc35199f0a3475ba.jpg", top: 100, left: 50, w: 100, h: 100},
-        // 2. Ảnh phụ thứ hai
-        {url: "https://i.pinimg.com/736x/b5/49/90/b5499069f109237fa55839f5d0f97f98.jpg", top: 100, left: 200, w: 100, h: 100}
-      ]
-    },
-    { // URL3
-      x: 254, y: 0, w: 127, h: 75,
-      url: "https://i.pinimg.com/736x/83/67/81/836781ba6cf73e116742a0da5daebe82.jpg",
-      extraImages: [
-        // 1. Ảnh phụ thứ nhất - bánh mì chảo
-        {url: "https://i.pinimg.com/736x/b9/b7/02/b9b70266dee44339603fe27a6b93e789.jpg", top: 100, left: 50, w: 100, h: 100},
-        // 2. Ảnh phụ thứ hai
-        {url: "https://i.pinimg.com/736x/b5/49/90/b5499069f109237fa55839f5d0f97f98.jpg", top: 100, left: 200, w: 100, h: 100}
-      ]
-    },
-    { // URL4
-      x: 381, y: 0, w: 126, h: 75,
-      url: "https://i.pinimg.com/736x/b5/49/90/b5499069f109237fa55839f5d0f97f98.jpg",
-      extraImages: [
-        // 1. Ảnh phụ thứ nhất - búa
-        {url: "https://i.pinimg.com/736x/b6/cd/0b/b6cd0b1599ee44c61a77c33c49444921.jpg", top: 100, left: 50, w: 100, h: 100},
-        // 2. Ảnh phụ thứ hai
-        {url: "https://i.pinimg.com/736x/b5/49/90/b5499069f109237fa55839f5d0f97f98.jpg", top: 100, left: 200, w: 100, h: 100}
-      ]
-    },
-    {x: 0, y: 250, w: 50, h: 50, action: "close"} // Nút tắt
-  ];
+    function closeTroll() {
+      trollPopup.classList.remove("active");
+    }
 
-  // ========== Shop ==========
-  const areasShop = [
-    { // URL1
-      x: 0, y: 0, w: 127, h: 75,
-      url: "https://i.pinimg.com/736x/5e/69/ee/5e69ee3aff12a31e38435da6280d0c3b.jpg",
-      extraImages: [
-        // 1. Ảnh phụ thứ nhất - lúa (trừ 50 vàng, tăng count)
-        {url: "https://i.pinimg.com/736x/49/53/da/4953dafba79eeaf48596a3329e2fcd46.jpg", top: 100, left: 50, w: 100, h: 100, goldCost: 50},
-        // 2. Ảnh phụ thứ hai (trừ 100 vàng, không tăng count)
-        {url: "https://i.pinimg.com/736x/b5/49/90/b5499069f109237fa55839f5d0f97f98.jpg", top: 100, left: 200, w: 100, h: 100, goldCost: 100}
-      ]
-    },
-    { // URL2
-      x: 127, y: 0, w: 127, h: 75,
-      url: "https://i.pinimg.com/736x/2f/a6/9e/2fa69ec09f4619c9b6a3211dedc9eef8.jpg",
-      extraImages: [
-        // 1. Ảnh phụ thứ nhất - sữa (trừ 50 vàng, tăng count)
-        {url: "https://i.pinimg.com/736x/41/98/21/41982106b72b6716dc35199f0a3475ba.jpg", top: 100, left: 50, w: 100, h: 100, goldCost: 50},
-        // 2. Ảnh phụ thứ hai (trừ 100 vàng, không tăng count)
-        {url: "https://i.pinimg.com/736x/b5/49/90/b5499069f109237fa55839f5d0f97f98.jpg", top: 100, left: 200, w: 100, h: 100, goldCost: 100}
-      ]
-    },
-    { // URL3
-      x: 254, y: 0, w: 127, h: 75,
-      url: "https://i.pinimg.com/736x/83/67/81/836781ba6cf73e116742a0da5daebe82.jpg",
-      extraImages: [
-        // 1. Ảnh phụ thứ nhất - bánh mì chảo (trừ 50 vàng, tăng count)
-        {url: "https://i.pinimg.com/736x/b9/b7/02/b9b70266dee44339603fe27a6b93e789.jpg", top: 100, left: 50, w: 100, h: 100, goldCost: 50},
-        // 2. Ảnh phụ thứ hai (trừ 100 vàng, không tăng count)
-        {url: "https://i.pinimg.com/736x/b5/49/90/b5499069f109237fa55839f5d0f97f98.jpg", top: 100, left: 200, w: 100, h: 100, goldCost: 100}
-      ]
-    },
-    { // URL4
-      x: 381, y: 0, w: 126, h: 75,
-      url: "https://i.pinimg.com/736x/b5/49/90/b5499069f109237fa55839f5d0f97f98.jpg",
-      extraImages: [
-        // 1. Ảnh phụ thứ nhất - búa (trừ 50 vàng, tăng count)
-        {url: "https://i.pinimg.com/736x/b6/cd/0b/b6cd0b1599ee44c61a77c33c49444921.jpg", top: 100, left: 50, w: 100, h: 100, goldCost: 50},
-        // 2. Ảnh phụ thứ hai (trừ 100 vàng, không tăng count)
-        {url: "https://i.pinimg.com/736x/b5/49/90/b5499069f109237fa55839f5d0f97f98.jpg", top: 100, left: 200, w: 100, h: 100, goldCost: 100}
-      ]
-    },
-    {x: 0, y: 250, w: 50, h: 50, action: "close"} // Nút tắt
-  ];
+    function spawnLaughs() {
+      for (let i = 0; i < 30; i++) {
+        const emoji = document.createElement("div");
+        emoji.className = "laugh";
+        emoji.innerHTML = ["🤣","😂","😆","😹"][Math.floor(Math.random()*4)];
+        emoji.style.left = Math.random() * 100 + "vw";
+        emoji.style.animationDuration = 2 + Math.random() * 2 + "s";
+        document.body.appendChild(emoji);
+        setTimeout(() => emoji.remove(), 4000);
+      }
+    }
 
-  // Gán sự kiện click
-  document.getElementById('nhaChinh').addEventListener('click', () => {
-    console.log("Nhà chính clicked"); // Debug
-    taoAnh3("https://i.pinimg.com/736x/5e/69/ee/5e69ee3aff12a31e38435da6280d0c3b.jpg", areasNhaChinh);
-  });
-
-  document.getElementById('shop').addEventListener('click', () => {
-    console.log("Shop clicked"); // Debug
-    taoAnh3("https://i.pinimg.com/736x/5e/69/ee/5e69ee3aff12a31e38435da6280d0c3b.jpg", areasShop, true);
-  });
-
-  // Gán sự kiện click cho nút nhận vàng
-  document.getElementById('goldButton').addEventListener('click', () => {
-    addGold(100); // Nhận 100 vàng mỗi lần click
-  });
-
-  // Khởi tạo hiển thị vàng
-  updateGoldDisplay();
+    window.onload = connectMQTT;
   </script>
 </body>
 </html>
